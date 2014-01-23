@@ -1,0 +1,48 @@
+sbt compile
+compile
+clean compile
+clean && compile
+clean
+compile
+gen-idea
+clean
+compile
+exit
+clean
+compile
+gen-idea
+test
+exit
+test
+exit
+test
+exit
+test
+clean
+test
+scalacOptions += ("-feature")
+scalacOptions ++= Seq("-feature")
+set scalacOptions in ThisBuild ++= Seq("-feature", "-unchecked", "-deprecation")
+clean
+compile
+clean
+compile
+test
+clean
+cleanFiles
+gen-idea
+compile
+test
+clean
+compile
+test
+last test:test
+test
+clean
+compile
+test
+exit
+test
+clean
+cleanFiles
+cleanKeepFiles
