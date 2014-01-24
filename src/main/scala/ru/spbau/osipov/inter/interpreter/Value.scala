@@ -21,7 +21,11 @@ case class RealNumber(value: BigDecimal) extends Number {
   def getNumber: BigDecimal = value
 }
 
-abstract class Logic(value: Boolean) extends Value
+abstract class Logic(val value: Boolean) extends Value
+
+object Logic {
+  def apply(b: Boolean) = if (b) True else False
+}
 
 case object True extends Logic(true)
 

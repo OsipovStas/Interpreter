@@ -83,6 +83,63 @@ case object !%! extends BinaryOp {
   }
 }
 
+case object !<! extends BinaryOp {
+  def apply(v1: Value, v2: Value): Val = try {
+    (v1, v2) match {
+      case (i1: IntNumber, i2: IntNumber) => Right(Logic(i1.value < i2.value))
+      case (n1: Number, n2: Number) => Right(Logic(n1.getNumber < n2.getNumber))
+      case (l1: Logic, l2: Logic) => Right(Logic(l1.value < l2.value))
+      case _ => Left(binaryException("Bad types"))
+    }
+  }
+  catch {
+    case ex: Exception => Left(binaryException(ex.getMessage))
+  }
+}
+
+case object !>! extends BinaryOp {
+  def apply(v1: Value, v2: Value): Val = try {
+    (v1, v2) match {
+      case (i1: IntNumber, i2: IntNumber) => Right(Logic(i1.value > i2.value))
+      case (n1: Number, n2: Number) => Right(Logic(n1.getNumber > n2.getNumber))
+      case (l1: Logic, l2: Logic) => Right(Logic(l1.value > l2.value))
+      case _ => Left(binaryException("Bad types"))
+    }
+  }
+  catch {
+    case ex: Exception => Left(binaryException(ex.getMessage))
+  }
+}
+
+
+case object !<=! extends BinaryOp {
+  def apply(v1: Value, v2: Value): Val = try {
+    (v1, v2) match {
+      case (i1: IntNumber, i2: IntNumber) => Right(Logic(i1.value <= i2.value))
+      case (n1: Number, n2: Number) => Right(Logic(n1.getNumber <= n2.getNumber))
+      case (l1: Logic, l2: Logic) => Right(Logic(l1.value <= l2.value))
+      case _ => Left(binaryException("Bad types"))
+    }
+  }
+  catch {
+    case ex: Exception => Left(binaryException(ex.getMessage))
+  }
+}
+
+case object !>=! extends BinaryOp {
+  def apply(v1: Value, v2: Value): Val = try {
+    (v1, v2) match {
+      case (i1: IntNumber, i2: IntNumber) => Right(Logic(i1.value >= i2.value))
+      case (n1: Number, n2: Number) => Right(Logic(n1.getNumber >= n2.getNumber))
+      case (l1: Logic, l2: Logic) => Right(Logic(l1.value >= l2.value))
+      case _ => Left(binaryException("Bad types"))
+    }
+  }
+  catch {
+    case ex: Exception  => Left(binaryException(ex.getMessage))
+  }
+}
+
 
 object BinaryOp {
   implicit def str2binOp(repr: String): BinaryOp = repr match {
@@ -91,10 +148,10 @@ object BinaryOp {
     case "*" => !*!
     case "/" => !/!
     case "%" => !%!
-//    case "<" => !<!
-//    case ">" => !>!
-//    case "<=" => !<=!
-//    case ">=" => !>=!
+    case "<" => !<!
+    case ">" => !>!
+    case "<=" => !<=!
+    case ">=" => !>=!
 //    case "==" => !==!
 //    case "!=" => !!=!
 //    case "&&" => !&&!

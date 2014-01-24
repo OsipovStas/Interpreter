@@ -2,6 +2,7 @@ package ru.spbau.osipov.inter
 
 import org.specs2.mutable.Specification
 import ru.spbau.osipov.inter.interpreter._
+import org.specs2.matcher.{MatchResult, Expectable, Matcher}
 
 
 /**
@@ -10,18 +11,23 @@ import ru.spbau.osipov.inter.interpreter._
  */
 class ExpressionSpec extends Specification {
 
+  def beCorrectInterpret: Matcher[Seq[(String, Value)]] = forall(be_==(true) ^^ {
+    t: (String, Value) => eval(t._1).right.get == t._2
+  })
+
+
   "Expressions " should {
-    "be interpret as 9894254525843536457346238934" in {
+    "correct interpret int literals" in {
       val repr: String = "9894254525843536457346238934"
       eval(repr) mustEqual Right(IntNumber(BigInt(repr)))
     }
 
-    "be interpret as -533451.2354545322346334534525335434544e342" in {
+    "correct interpret float literals" in {
       val repr: String = "-533451.2354545322346334534525335434544e342"
       eval(repr) mustEqual Right(RealNumber(BigDecimal(repr)))
     }
 
-    "be interpret as false" in {
+    "correct interpret logic values" in {
       val repr: String = "F"
       eval(repr) mustEqual Right(False)
     }
@@ -31,12 +37,19 @@ class ExpressionSpec extends Specification {
       eval(repr) mustEqual Right(RealNumber(BigDecimal("40747657675775586457.3424245")))
     }
 
-    "be interpret as chars" in {
-      val repr: String =
+    "correct interpret string literals " in {
+      val programs = Seq(
         """
-          |"asdasg dfgsыв ывапыва\n fsdf\t ваывао ыва"
-        """.stripMargin
-      eval(repr) mustEqual Right(Chars(repr.trim))
+          |"зылвовпаовпдjdlfns"
+        """.stripMargin,
+        """
+          |"fkjsakjfdkasjfla"
+        """.stripMargin,
+        """
+          | "!##№№24\\\nsdfsd;%:;"
+        """.stripMargin)
+      val results = programs.map(_.trim).map(Chars)
+      (programs zip results) must beCorrectInterpret
     }
 
     "correct eval binary operators" in {
@@ -45,6 +58,13 @@ class ExpressionSpec extends Specification {
       val value: BigDecimal = 4 + 342423.4 % 42.5 * (1.0 - 5)
       eval(repr) mustEqual Right(IntNumber(3424234 % 425 * 2 / (-234 - 7)))
       (eval(repr2).right.get match {case RealNumber(v) if (v - value).abs < 0.001  => true}) mustEqual true
+    }
+
+
+    "correct eval ordered operators " in {
+      val programs = Seq("4 < 5", "4 < 3", "4 > 4", "(3 + 1) >= -3.5", "T < F")
+      val results = Seq(4 < 5, 4 < 3, 4 > 4, (3 + 1) >= -3.5, true < false).map(Logic(_))
+      (programs zip results) must beCorrectInterpret
     }
 
 

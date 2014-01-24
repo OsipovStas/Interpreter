@@ -37,12 +37,20 @@ trait Parsing {
 
 abstract class BaseParser extends JavaTokenParsers {
 
-  def expr: Parser[Expression] = term ~ rep("+" ~ term | "-" ~ term) ^^ {
-    case first ~ terms => buildBinOpTree(first, terms.map(t => (t._1, t._2)))
+  def expr: Parser[Expression] = lge ~ rep("<=" ~ lge | ">=" ~ lge) ^^ {
+    case first ~ other => buildBinOpTree(first, other.map(t => (t._1, t._2)))
+  }
+
+  def lge: Parser[Expression] = lg ~ rep("<" ~ lg | ">" ~ lg) ^^ {
+    case first ~ other => buildBinOpTree(first, other.map(t => (t._1, t._2)))
+  }
+
+  def lg: Parser[Expression] = term ~ rep("+" ~ term | "-" ~ term) ^^ {
+    case first ~ other => buildBinOpTree(first, other.map(t => (t._1, t._2)))
   }
 
   def term: Parser[Expression] = factor ~ rep("*" ~ factor | "/" ~ factor | "%" ~ factor) ^^ {
-    case first ~ factors => buildBinOpTree(first, factors.map(t => (t._1, t._2)))
+    case first ~ other => buildBinOpTree(first, other.map(t => (t._1, t._2)))
   }
 
   def factor: Parser[Expression] = atom | "(" ~> expr <~ ")"
