@@ -45,11 +45,13 @@ object Interpreter {
 }
 
 object eval extends Parsing with Executing {
-  type R = Node
+  type R = Ctx
   val Executor: eval.Executor[eval.R] = CtxExecutor(Map())
   val Parser: eval.LanguageParser[eval.R] = MainParser
 
   def apply(program: String): Either[Errors, eval.R] = Parser.parseProgram(program).right.flatMap(Executor.execute)
+
+  def result(ctx: eval.R) = ctx.get(Interpreter.Return)
 }
 
 

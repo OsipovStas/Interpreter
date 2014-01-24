@@ -40,11 +40,12 @@ case class VarExpression(name: Var) extends Expression {
 case class CallExpression(function: Var, args: Seq[Expression]) extends Expression {
 
   private val emptyArgs: Values = Right(Seq())
+  private val void: Value = Single
+
 
   def createLocalCtx(ctx: Ctx, bindings: Seq[Var]): Either[Seq[String], Ctx] = {
     evalArgs(ctx).right flatMap {
-      case values if bindings.size == values.size => Right((bindings zip values).toMap)
-      case values => Left(wrongParameters(bindings.toString(), values.toString()))
+      case values => Right((bindings zip values).toMap)
     }
   }
 
@@ -53,8 +54,8 @@ case class CallExpression(function: Var, args: Seq[Expression]) extends Expressi
 
   def eval(ctx: Ctx): Val = ctx.get(function).toRight(noDefFound(function)).right flatMap {
     case Function(bindings, body, scope) => createLocalCtx(ctx, bindings).right flatMap {
-      case locals => body.exec(locals ++ scope).right flatMap {
-        case t => t.get(Return).toRight(Seq("fsf"))
+      case locals => body.exec(locals ++ scope).right map {
+        case r => r.getOrElse(Return, void)
       }
     }
     case err => Left(functionExpected(err.toString))

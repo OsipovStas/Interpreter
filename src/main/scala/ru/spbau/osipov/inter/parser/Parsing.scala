@@ -12,6 +12,7 @@ import ru.spbau.osipov.inter.interpreter.IntNumber
 import ru.spbau.osipov.inter.interpreter.RealNumber
 import ru.spbau.osipov.inter.Executable
 import ru.spbau.osipov.inter.errors.Errors.Errors
+import ru.spbau.osipov.inter.Interpreter.Ctx
 
 
 trait Parsing {
@@ -32,15 +33,45 @@ trait Parsing {
     }
   }
 
-  object MainParser extends BaseParser with LanguageParser[Node] {
-    def parseProgram(program: String): Either[Errors, Executable[Node]] = ???
+  object MainParser extends BaseParser with LanguageParser[Ctx] {
+    def parseProgram(src: String): Either[Errors, Executable[Ctx]] = parseAll(code, src) match {
+      case Success(e, _) => Right(e)
+      case a: NoSuccess => Left(Seq(a.msg))
+    }
   }
 
 }
 
 abstract class BaseParser extends JavaTokenParsers {
 
-  def expr: Parser[Expression] = disj~ rep("||" ~ disj) ^^ {
+  def code: Parser[Node] = statement ~ rep(";" ~> statement) ^^ {
+    case first ~ other => other.foldLeft(first)(ClipNode)
+  }
+
+  def statement: Parser[Node] = assign | define | ex
+
+  def define: Parser[Node] = "def" ~> ident ~ sign ~ fbody ^^ {
+    case i ~ s ~ b => FunctionNode(i, s, b)
+  }
+
+  def sign = "(" ~> repsep(param, ",") <~ ")" ^^ {
+    case params => params.map {
+      case n ~ e => (n, e)
+    }
+  }
+
+  def param = ident ~ opt("=" ~> expr)
+  
+  def fbody = "{" ~> code <~ "}"
+
+  def assign: Parser[Node] = (ident <~ "=") ~ expr ^^ {
+    case n ~ e => AssignVar(n, e)
+  }
+
+  def ex: Parser[Node] = expr ^^ (e => ExpressionNode(e))
+
+
+  def expr: Parser[Expression] = disj ~ rep("||" ~ disj) ^^ {
     case first ~ other => buildLazyBinOpTree(first, other.map(t => (t._1, t._2)))
   }
 
@@ -95,6 +126,7 @@ abstract class BaseParser extends JavaTokenParsers {
   def reducer(left: Expression, next: (String, Expression)) = BinaryExpression(next._1, left, next._2)
 
   def lazyReducer(left: Expression, next: (String, Expression)) = LazyBinExpression(next._1, left, next._2)
+
 
   def buildBinOpTree(first: Expression, other: Seq[(String, Expression)]) = other.foldLeft(first)(reducer)
 

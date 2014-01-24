@@ -2,7 +2,7 @@ package ru.spbau.osipov.inter
 
 import org.specs2.mutable.Specification
 import ru.spbau.osipov.inter.interpreter._
-import org.specs2.matcher.{MatchResult, Expectable, Matcher}
+import org.specs2.matcher.Matcher
 
 
 /**
@@ -11,7 +11,7 @@ import org.specs2.matcher.{MatchResult, Expectable, Matcher}
  */
 class ExpressionSpec extends Specification {
 
-  def beCorrectInterpret: Matcher[Seq[(String, Value)]] = forall(be_==(true) ^^ {
+  def beCorrectInterpret: Matcher[Seq[(String, Value)]] = forall(beTrue ^^ {
     t: (String, Value) => expr(t._1).right.get == t._2
   })
 

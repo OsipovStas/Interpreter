@@ -85,6 +85,18 @@ case class LoopNode(cond: Expression, body: Node) extends Node {
   }
 }
 
-case class FunctionNode(name: Var, bindings: Seq[Var], body: Node) extends Node {
-  def exec(ctx: Ctx): Env = Right(ctx + (name -> Function(bindings, body, ctx)))
+case class FunctionNode(name: Var, bindings: Seq[(Var, Option[Expression])], body: Node) extends Node {
+
+  def argNames = bindings.map(_._1)
+
+  def evalBindings(ctx: Ctx): Seq[(Var, Val)] = bindings.filterNot(_._2.isEmpty).map(t => (t._1, t._2.get.eval(ctx)))
+
+  def defaultBindings(vals: Seq[(Var, Val)] ) = vals.filter(_._2.isLeft).map(_._2.left.get) match {
+    case s if s.isEmpty => Right(vals.map(t => (t._1, t._2.right.get)).toMap)
+    case s => Left(s.foldLeft[Errors](Seq())(_ ++ _))
+  }
+
+  def exec(ctx: Ctx): Env = defaultBindings(evalBindings(ctx)).right.map {
+    case scope => ctx + (name -> Function(argNames, body, ctx ++ scope))
+  }
 }
