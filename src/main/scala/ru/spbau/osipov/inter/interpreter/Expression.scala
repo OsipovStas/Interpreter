@@ -2,7 +2,7 @@ package ru.spbau.osipov.inter.interpreter
 
 import ru.spbau.osipov.inter.Interpreter._
 import ru.spbau.osipov.inter.errors.Errors._
-import ru.spbau.osipov.inter.Executable
+import ru.spbau.osipov.inter.{Interpreter, Executable}
 
 /**
  * @author stasstels
@@ -53,7 +53,7 @@ case class CallExpression(function: Var, args: Seq[Expression]) extends Expressi
 
   def eval(ctx: Ctx): Val = ctx.get(function).toRight(noDefFound(function)).right flatMap {
     case Function(bindings, body, scope) => createLocalCtx(ctx, bindings).right flatMap {
-      case locals => body.execute(locals ++ scope).right flatMap {
+      case locals => body.exec(locals ++ scope).right flatMap {
         case t => t.get(Return).toRight(Seq("fsf"))
       }
     }
@@ -66,5 +66,17 @@ case class BinaryExpression(op: BinaryOp, left: Expression, right: Expression) e
     case l => right.eval(ctx).right flatMap {
       case r => op(l, r)
     }
+  }
+}
+
+case class LazyBinExpression(op: LazyBinaryOp, left: Expression, right: Expression) extends Expression {
+  def eval(ctx: Ctx): Val = left.eval(ctx).right flatMap {
+    case l => op(l,  right.eval(ctx))
+  }
+}
+
+case class UnaryExpression(op: UnaryOp, e: Expression) extends Expression {
+  def eval(ctx: Ctx): Val = e.eval(ctx).right flatMap {
+    case v => op(v)
   }
 }

@@ -11,8 +11,7 @@ import ru.spbau.osipov.inter.interpreter._
 import ru.spbau.osipov.inter.interpreter.IntNumber
 import ru.spbau.osipov.inter.interpreter.RealNumber
 import ru.spbau.osipov.inter.Executable
-import ru.spbau.osipov.inter.Interpreter.Errors
-
+import ru.spbau.osipov.inter.errors.Errors.Errors
 
 
 trait Parsing {
@@ -25,7 +24,7 @@ trait Parsing {
   }
 
 
-  class ExpressionParser extends BaseParser with LanguageParser[Value] {
+  object ExpressionParser extends BaseParser with LanguageParser[Value] {
 
     def parseProgram(program: String) = parseAll(expr, program) match {
       case Success(e, _) => Right(e)
@@ -33,11 +32,27 @@ trait Parsing {
     }
   }
 
+  object MainParser extends BaseParser with LanguageParser[Node] {
+    def parseProgram(program: String): Either[Errors, Executable[Node]] = ???
+  }
+
 }
 
 abstract class BaseParser extends JavaTokenParsers {
 
-  def expr: Parser[Expression] = lge ~ rep("<=" ~ lge | ">=" ~ lge) ^^ {
+  def expr: Parser[Expression] = disj~ rep("||" ~ disj) ^^ {
+    case first ~ other => buildLazyBinOpTree(first, other.map(t => (t._1, t._2)))
+  }
+
+  def disj: Parser[Expression] = conj ~ rep("&&" ~ conj) ^^ {
+    case first ~ other => buildLazyBinOpTree(first, other.map(t => (t._1, t._2)))
+  }
+
+  def conj: Parser[Expression] = eq ~ rep("==" ~ eq | "!=" ~ eq) ^^ {
+    case first ~ other => buildBinOpTree(first, other.map(t => (t._1, t._2)))
+  }
+
+  def eq: Parser[Expression] = lge ~ rep("<=" ~ lge | ">=" ~ lge) ^^ {
     case first ~ other => buildBinOpTree(first, other.map(t => (t._1, t._2)))
   }
 
@@ -53,7 +68,12 @@ abstract class BaseParser extends JavaTokenParsers {
     case first ~ other => buildBinOpTree(first, other.map(t => (t._1, t._2)))
   }
 
-  def factor: Parser[Expression] = atom | "(" ~> expr <~ ")"
+  def factor: Parser[Expression] = opt("not" | "-") ~ unary ^^ {
+    case Some(u) ~ e => UnaryExpression(u, e)
+    case None ~ e => e
+  }
+
+  def unary: Parser[Expression] = atom | "(" ~> expr <~ ")"
 
   def atom: Parser[Expression] = liter | call
 
@@ -74,7 +94,12 @@ abstract class BaseParser extends JavaTokenParsers {
 
   def reducer(left: Expression, next: (String, Expression)) = BinaryExpression(next._1, left, next._2)
 
+  def lazyReducer(left: Expression, next: (String, Expression)) = LazyBinExpression(next._1, left, next._2)
+
   def buildBinOpTree(first: Expression, other: Seq[(String, Expression)]) = other.foldLeft(first)(reducer)
+
+  def buildLazyBinOpTree(first: Expression, other: Seq[(String, Expression)]) = other.foldLeft(first)(lazyReducer)
+
 
   def str2Number(repr: String): Number = str2bigInt(repr).map(IntNumber).getOrElse(RealNumber(BigDecimal(repr)))
 
