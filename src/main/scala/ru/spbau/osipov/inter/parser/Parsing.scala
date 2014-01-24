@@ -38,11 +38,11 @@ trait Parsing {
 abstract class BaseParser extends JavaTokenParsers {
 
   def expr: Parser[Expression] = term ~ rep("+" ~ term | "-" ~ term) ^^ {
-    case first ~ terms => binOperationReduce(first, terms.map(t => (t._1, t._2)))
+    case first ~ terms => buildBinOpTree(first, terms.map(t => (t._1, t._2)))
   }
 
   def term: Parser[Expression] = factor ~ rep("*" ~ factor | "/" ~ factor | "%" ~ factor) ^^ {
-    case first ~ factors => binOperationReduce(first, factors.map(f => (f._1, f._2)))
+    case first ~ factors => buildBinOpTree(first, factors.map(t => (t._1, t._2)))
   }
 
   def factor: Parser[Expression] = atom | "(" ~> expr <~ ")"
@@ -64,14 +64,9 @@ abstract class BaseParser extends JavaTokenParsers {
 
   def locals: Parser[List[Expression]] = "(" ~> repsep(expr, ",") <~ ")"
 
-  def binOperationReducer(next: (String, Expression), current: Option[(String, Expression)]) = current map {
-    case (curOp, right) => (next._1, BinaryExpression(curOp, next._2, right))
-  } orElse Some(next)
+  def reducer(left: Expression, next: (String, Expression)) = BinaryExpression(next._1, left, next._2)
 
-  def binOperationReduce(mostLeft: Expression, other: List[(String, Expression)]): Expression =
-    other.foldRight[Option[(String, Expression)]](None)(binOperationReducer).map(r => BinaryExpression(r._1, mostLeft, r._2)).getOrElse(mostLeft)
-
-
+  def buildBinOpTree(first: Expression, other: Seq[(String, Expression)]) = other.foldLeft(first)(reducer)
 
   def str2Number(repr: String): Number = str2bigInt(repr).map(IntNumber).getOrElse(RealNumber(BigDecimal(repr)))
 

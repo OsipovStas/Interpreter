@@ -26,6 +26,11 @@ class ExpressionSpec extends Specification {
       eval(repr) mustEqual Right(False)
     }
 
+    "not overflow" in {
+      val repr: String = "3.3424245 + (38324234252352352323 + 2423423423423234131)"
+      eval(repr) mustEqual Right(RealNumber(BigDecimal("40747657675775586457.3424245")))
+    }
+
     "be interpret as chars" in {
       val repr: String =
         """
@@ -33,6 +38,15 @@ class ExpressionSpec extends Specification {
         """.stripMargin
       eval(repr) mustEqual Right(Chars(repr.trim))
     }
+
+    "correct eval binary operators" in {
+      val repr: String = "3424234 % 425 * 2 / (-234 - 7)"
+      val repr2: String = "4 + 342423.4 % 42.5 * (1.0 - 5)"
+      val value: BigDecimal = 4 + 342423.4 % 42.5 * (1.0 - 5)
+      eval(repr) mustEqual Right(IntNumber(3424234 % 425 * 2 / (-234 - 7)))
+      (eval(repr2).right.get match {case RealNumber(v) if (v - value).abs < 0.001  => true}) mustEqual true
+    }
+
 
   }
 

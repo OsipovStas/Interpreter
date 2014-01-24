@@ -17,7 +17,7 @@ sealed abstract class BinaryOp {
   )
 }
 
-object Sum extends BinaryOp {
+case object !+! extends BinaryOp {
   def apply(v1: Value, v2: Value): Val = try {
     (v1, v2) match {
       case (i1: IntNumber, i2: IntNumber) => Right(IntNumber(i1.value + i2.value))
@@ -30,7 +30,75 @@ object Sum extends BinaryOp {
   }
 }
 
+case object !-! extends BinaryOp {
+  def apply(v1: Value, v2: Value): Val = try {
+    (v1, v2) match {
+      case (i1: IntNumber, i2: IntNumber) => Right(IntNumber(i1.value - i2.value))
+      case (n1: Number, n2: Number) => Right(RealNumber(n1.getNumber - n2.getNumber))
+      case _ => Left(binaryException("Bad types"))
+    }
+  }
+  catch {
+    case ex: Exception => Left(binaryException(ex.getMessage))
+  }
+}
+
+case object !*! extends BinaryOp {
+  def apply(v1: Value, v2: Value): Val = try {
+    (v1, v2) match {
+      case (i1: IntNumber, i2: IntNumber) => Right(IntNumber(i1.value * i2.value))
+      case (n1: Number, n2: Number) => Right(RealNumber(n1.getNumber * n2.getNumber))
+      case _ => Left(binaryException("Bad types"))
+    }
+  }
+  catch {
+    case ex: Exception => Left(binaryException(ex.getMessage))
+  }
+}
+
+case object !/! extends BinaryOp {
+  def apply(v1: Value, v2: Value): Val = try {
+    (v1, v2) match {
+      case (i1: IntNumber, i2: IntNumber) => Right(IntNumber(i1.value / i2.value))
+      case (n1: Number, n2: Number) => Right(RealNumber(n1.getNumber / n2.getNumber))
+      case _ => Left(binaryException("Bad types"))
+    }
+  }
+  catch {
+    case ex: Exception => Left(binaryException(ex.getMessage))
+  }
+}
+
+
+case object !%! extends BinaryOp {
+  def apply(v1: Value, v2: Value): Val = try {
+    (v1, v2) match {
+      case (i1: IntNumber, i2: IntNumber) => Right(IntNumber(i1.value % i2.value))
+      case (n1: Number, n2: Number) => Right(RealNumber(n1.getNumber % n2.getNumber))
+      case _ => Left(binaryException("Bad types"))
+    }
+  }
+  catch {
+    case ex: Exception => Left(binaryException(ex.getMessage))
+  }
+}
+
 
 object BinaryOp {
-  implicit def str2binOp(repr: String): BinaryOp = Sum
+  implicit def str2binOp(repr: String): BinaryOp = repr match {
+    case "+" => !+!
+    case "-" => !-!
+    case "*" => !*!
+    case "/" => !/!
+    case "%" => !%!
+//    case "<" => !<!
+//    case ">" => !>!
+//    case "<=" => !<=!
+//    case ">=" => !>=!
+//    case "==" => !==!
+//    case "!=" => !!=!
+//    case "&&" => !&&!
+//    case "||" => !||!
+    case _ => !+!
+  }
 }
