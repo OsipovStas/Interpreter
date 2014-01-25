@@ -24,6 +24,13 @@ object Errors {
     """.stripMargin
   )
 
+  def structureExpected(actual: String) = Seq(
+    s"""
+      |Structure value expected
+      |Actual: $actual
+    """.stripMargin
+  )
+
   def binaryException(what: String) = Seq(
     s"""
       |Exception in binary expression:

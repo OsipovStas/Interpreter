@@ -12,7 +12,7 @@ import ru.spbau.osipov.inter.interpreter.IntNumber
 import ru.spbau.osipov.inter.interpreter.RealNumber
 import ru.spbau.osipov.inter.Executable
 import ru.spbau.osipov.inter.errors.Errors.Errors
-import ru.spbau.osipov.inter.Interpreter.Ctx
+import ru.spbau.osipov.inter.Defines.Ctx
 
 
 trait Parsing {
@@ -48,8 +48,21 @@ abstract class BaseParser extends JavaTokenParsers {
     case first ~ other => other.foldLeft(first)(ClipNode)
   }
 
-  def statement: Parser[Node] = loop | branch | define | assign | ex
+  def statement: Parser[Node] = struct | loop | branch | define | assign | ex
 
+
+  def struct: Parser[Node] = constructor ~ opt(methods) ^^ {
+    case n ~ p ~ Some(m) => m.map {
+      case i ~ s ~ b => FunctionNode(n + "$" + i, s, b)
+    }.foldLeft[Node](StructureNode(n, p))(ClipNode)
+    case n ~ p ~ None => StructureNode(n, p)
+  }
+
+  def constructor = "struct" ~> ident ~ sign
+
+  def methods = "{" ~> rep1(method) <~ "}"
+
+  def method = "def" ~> ident ~ sign ~ block
 
   def loop: Parser[Node] = "while" ~> ("(" ~> expr <~ ")") ~ block ^^ {
     case cond ~ body => LoopNode(cond, body)
@@ -75,8 +88,9 @@ abstract class BaseParser extends JavaTokenParsers {
   
   def block = "{" ~> code <~ "}" | statement
 
-  def assign: Parser[Node] = (ident <~ "=") ~ expr ^^ {
-    case n ~ e => AssignVar(n, e)
+  def assign: Parser[Node] = (ident ~ opt("." ~> ident) <~ "=") ~ expr ^^ {
+    case i1 ~ None ~ e => AssignVar(i1, e)
+    case i1 ~ Some(i2) ~ e => AssignField(i1, i2, e)
   }
 
   def ex: Parser[Node] = expr ^^ (e => ExpressionNode(e))
@@ -127,9 +141,11 @@ abstract class BaseParser extends JavaTokenParsers {
       "T" ^^ {_ => ValExpression(True)} |
       "F" ^^ {_ => ValExpression(False)}
 
-  def call = ident ~ opt(locals) ^^ {
-    case i ~ None => VarExpression(i)
-    case i ~ Some(l) => CallExpression(i, l)
+  def call = ident ~ opt("." ~> ident) ~ opt(locals) ^^ {
+    case i ~ None ~ None => VarExpression(i)
+    case i ~  None ~ Some(l) => FunctionCall(i, l)
+    case i1 ~ Some(i2) ~ None => FieldExpression(i1, i2)
+    case i1 ~ Some(i2) ~ Some(l) => MethodCall(i1, i2, l)
   }
 
   def locals: Parser[List[Expression]] = "(" ~> repsep(expr, ",") <~ ")"

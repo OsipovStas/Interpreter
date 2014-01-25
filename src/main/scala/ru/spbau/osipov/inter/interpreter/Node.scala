@@ -1,9 +1,9 @@
 package ru.spbau.osipov.inter.interpreter
 
 
-import ru.spbau.osipov.inter.Interpreter._
-import ru.spbau.osipov.inter.{Interpreter, Executable}
-import ru.spbau.osipov.inter.errors.Errors.Errors
+import ru.spbau.osipov.inter.Defines._
+import ru.spbau.osipov.inter.{Defines, Executable}
+import ru.spbau.osipov.inter.errors.Errors._
 import scala.util.control.TailCalls._
 
 /**
@@ -41,6 +41,16 @@ case class AssignVar(name: Var, value: Expression) extends Node {
     case v => ctx + (name -> v)
   }
 }
+
+case class AssignField(obj: Var, field: Var, value: Expression) extends Node {
+  def exec(ctx: Ctx): Env = ctx.get(obj).map {
+    case Structure(t, fields) => value.eval(ctx).right map {
+      case v => ctx + (obj -> Structure(t, fields + (field -> v)))
+    }
+    case v => Left(structureExpected(v.toString))
+  } getOrElse Left(noDefFound(obj))
+}
+
 
 case class PrintNode(value: Expression) extends Node {
   def exec(ctx: Ctx): Env = value.eval(ctx).right map {
@@ -80,19 +90,36 @@ case class LoopNode(cond: Expression, body: Node) extends Node {
     case nCtx => tailcall(execRec(nCtx))
   })
 
-  def exec(ctx: Interpreter.Ctx): Env = execRec(ctx).result
+  def exec(ctx: Defines.Ctx): Env = execRec(ctx).result
 }
 
-case class FunctionNode(name: Var, bindings: Seq[(Var, Option[Expression])], body: Node) extends Node {
-
+abstract class DefineNode(bindings: Seq[(Var, Option[Expression])]) extends Node {
   def argNames = bindings.map(_._1)
 
   def evalBindings(ctx: Ctx): Seq[(Var, Val)] = bindings.filterNot(_._2.isEmpty).map(t => (t._1, t._2.get.eval(ctx)))
 
-  def defaultBindings(vals: Seq[(Var, Val)] ) = vals.filter(_._2.isLeft).map(_._2.left.get) match {
+  def defaultBindings(vals: Seq[(Var, Val)]) = vals.filter(_._2.isLeft).map(_._2.left.get) match {
     case s if s.isEmpty => Right(vals.map(t => (t._1, t._2.right.get)).toMap)
     case s => Left(s.foldLeft[Errors](Seq())(_ ++ _))
   }
+}
+
+
+
+case class StructureNode(name: Var, fields: Seq[(Var, Option[Expression])]) extends DefineNode(fields) {
+
+  def body = ExpressionNode(ConsExpression(name))
+
+  def exec(ctx: Ctx): Env = defaultBindings(evalBindings(ctx)).right.map {
+    case scope => ctx + (name -> Function(argNames, body, ctx ++ scope))
+  }
+}
+
+
+
+
+
+case class FunctionNode(name: Var, bindings: Seq[(Var, Option[Expression])], body: Node) extends DefineNode(bindings) {
 
   def exec(ctx: Ctx): Env = defaultBindings(evalBindings(ctx)).right.map {
     case scope => ctx + (name -> Function(argNames, body, ctx ++ scope))

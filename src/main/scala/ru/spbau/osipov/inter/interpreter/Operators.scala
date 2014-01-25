@@ -1,8 +1,7 @@
 package ru.spbau.osipov.inter.interpreter
 
 import scala.language.implicitConversions
-import ru.spbau.osipov.inter.Interpreter._
-import ru.spbau.osipov.inter.Interpreter
+import ru.spbau.osipov.inter.Defines._
 import ru.spbau.osipov.inter.errors.Errors
 
 /**
@@ -151,7 +150,7 @@ case object !==! extends BinaryOp {
       case (l1: Logic, l2: Logic) => Right(Logic(l1.value == l2.value))
       case (Chars(s1), Chars(s2)) => Right(Logic(s1 == s2))
       case (Single, Single) => Right(True)
-      case _ => Left(binaryException("Bad types"))
+      case (a, b) => Right(Logic(a == b))
     }
   }
   catch {
@@ -167,7 +166,7 @@ case object !!=! extends BinaryOp {
       case (l1: Logic, l2: Logic) => Right(Logic(l1.value != l2.value))
       case (Chars(s1), Chars(s2)) => Right(Logic(s1 != s2))
       case (Single, Single) => Right(True)
-      case _ => Left(binaryException("Bad types"))
+      case (a, b) => Right(Logic(a != b))
     }
   }
   catch {

@@ -1,7 +1,7 @@
 package ru.spbau.osipov.inter
 
-import ru.spbau.osipov.inter.interpreter.{Node, Value}
-import ru.spbau.osipov.inter.Interpreter.Ctx
+import ru.spbau.osipov.inter.interpreter.{Single, Value}
+import ru.spbau.osipov.inter.Defines.{Env, Ctx}
 import ru.spbau.osipov.inter.parser.Parsing
 import ru.spbau.osipov.inter.errors.Errors.Errors
 
@@ -33,8 +33,7 @@ trait Executing { this: Parsing =>
   
 }
 
-
-object Interpreter {
+object Defines {
   type Val = Either[Errors, Value]
   type Values = Either[Errors, Seq[Value]]
   type Var = String
@@ -51,7 +50,7 @@ object eval extends Parsing with Executing {
 
   def apply(program: String): Either[Errors, eval.R] = Parser.parseProgram(program).right.flatMap(Executor.execute)
 
-  def result(ctx: eval.R) = ctx.get(Interpreter.Return)
+  def result(ctx: eval.R) = ctx.get(Defines.Return)
 }
 
 
@@ -66,9 +65,18 @@ object expr extends Parsing with Executing {
 
 object Repl extends App {
 
-//  def loop: Stream[String] = eval(readLine()) #:: loop
-//
-//  def apply() = loop.foreach(println(_))
-//
-//  Repl()
+  def loop: Stream[Unit] = print(eval(readLine())) #:: loop
+
+  def print(e: Env) = e.fold({
+    case err =>
+      println("Errors occurred: ")
+      err.foreach(println(_))
+  }, {
+    case ctx =>
+      printf("Result: %s\n", ctx.getOrElse(Defines.Return, Single))
+  })
+
+  def apply() = loop
+
+  Repl()
 }

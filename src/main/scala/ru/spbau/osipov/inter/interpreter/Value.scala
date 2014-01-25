@@ -1,6 +1,6 @@
 package ru.spbau.osipov.inter.interpreter
 
-import ru.spbau.osipov.inter.Interpreter._
+import ru.spbau.osipov.inter.Defines._
 
 
 /**
@@ -35,6 +35,6 @@ case class Chars(value: String) extends Value
 
 case class Function(bindings: Seq[Var], body: Node, scope: Ctx) extends Value
 
-case class Structure(data: Map[String, Value]) extends Value
+case class Structure(tag: Var, fields: Ctx) extends Value
 
 case object Single extends Value

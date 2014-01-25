@@ -64,7 +64,7 @@ class ParserSpec extends Specification {
         """.stripMargin
       val parseResult: PI.ParseResult[Expression] = PI.parseAll(PI.expr, repr)
       parseResult.map {
-        case CallExpression(f, _)  => Some(f)
+        case FunctionCall(f, _)  => Some(f)
         case _ => None
       } getOrElse None mustEqual Some("f")
     }

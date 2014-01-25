@@ -1,6 +1,6 @@
 package ru.spbau.osipov.inter.interpreter
 
-import ru.spbau.osipov.inter.Interpreter._
+import ru.spbau.osipov.inter.Defines._
 import ru.spbau.osipov.inter.errors.Errors._
 import ru.spbau.osipov.inter.Executable
 
@@ -13,13 +13,6 @@ import ru.spbau.osipov.inter.Executable
 sealed abstract class Expression extends Executable[Value] {
 
   final def execute(ctx: Ctx): Either[Errors, Value] = eval(ctx)
-
-
-  final def join(values: Values, value: Val): Values = value match {
-    case Right(v) => values.right.map(_ :+ v)
-    case Left(e) if values.isRight => Left(e)
-    case Left(e) => values.left.map(_ ++ e)
-  }
 
 
   def eval(ctx: Ctx): Val
@@ -35,12 +28,28 @@ case class VarExpression(name: Var) extends Expression {
   def eval(ctx: Ctx): Val = ctx.get(name).map(Right(_)).getOrElse(Left(noDefFound(name)))
 }
 
+case class ConsExpression(tag: Var) extends Expression {
+  def eval(ctx: Ctx): Val = Right(Structure(tag + "$", ctx - tag))
+}
+
+case class FieldExpression(name: Var, field: Var) extends Expression {
+  def eval(ctx: Ctx): Val = ctx.get(name).map {
+    case Structure(_, fields) => fields.get(field).map(Right(_)).getOrElse(Left(noDefFound(field)))
+    case s => Left(structureExpected(s.toString))
+  } getOrElse Left(noDefFound(name))
+}
 
 
-case class CallExpression(function: Var, args: Seq[Expression]) extends Expression {
-
+abstract class Call(args: Seq[Expression]) extends Expression {
   private val emptyArgs: Values = Right(Seq())
-  private val void: Value = Single
+  protected val void: Value = Single
+
+  private def join(values: Values, value: Val): Values = value match {
+    case Right(v) => values.right.map(_ :+ v)
+    case Left(e) if values.isRight => Left(e)
+    case Left(e) => values.left.map(_ ++ e)
+  }
+
 
 
   def createLocalCtx(ctx: Ctx, bindings: Seq[Var]): Either[Seq[String], Ctx] = {
@@ -50,11 +59,33 @@ case class CallExpression(function: Var, args: Seq[Expression]) extends Expressi
   }
 
   def evalArgs(ctx: Ctx): Values = args.map(_ eval ctx).foldLeft(emptyArgs)(join)
+}
 
+
+case class MethodCall(name: Var, method: Var, args: Seq[Expression]) extends Call(args) {
+  
+  def eval(ctx: Ctx): Val = ctx.get(name).map {
+    case obj @ Structure(tag, fields) => ctx.get(tag + method).map {
+      case m @ Function(_, _, _) => evalMethod(obj, m, ctx)
+      case v => Left(functionExpected(v.toString))
+    } getOrElse Left(noDefFound(method))
+    case v => Left(structureExpected(v.toString))
+  } getOrElse Left(noDefFound(name))
+  
+  def evalMethod(obj: Structure, method: Function, ctx: Ctx): Val = createLocalCtx(ctx, method.bindings).right flatMap {
+    case locals => method.body.exec(method.scope ++ obj.fields ++ locals + (name + obj.tag -> method)).right map {
+      case r => r.getOrElse(Return, void)
+    }
+  }
+}
+
+
+
+case class FunctionCall(function: Var, args: Seq[Expression]) extends Call(args) {
 
   def eval(ctx: Ctx): Val = ctx.get(function).toRight(noDefFound(function)).right flatMap {
     case f @ Function(bindings, body, scope) => createLocalCtx(ctx, bindings).right flatMap {
-      case locals => body.exec(locals ++ scope + (function -> f)).right map {
+      case locals => body.exec(scope ++ locals + (function -> f)).right map {
         case r => r.getOrElse(Return, void)
       }
     }

@@ -123,6 +123,32 @@ class InterpreterSpec extends Specification {
     }
 
 
+    "correct execute struct expressions " in {
+      val programs = Seq(
+        """
+          |struct Person(name, age = 6, city = "New-York") {
+          |   def getDoubleAge() {
+          |       age * 2
+          |   }
+          |};
+          |mrX = Person("John");
+          |mrX.getDoubleAge()
+        """.stripMargin,
+        """
+          |struct Person(name, salary, age = 6, city = "New-York") {
+          |   def getDoubleAge() {
+          |       age * 2
+          |   }
+          |};
+          |mrX = Person("John", 45);
+          |mrX.salary = 10;
+          |mrX.salary
+        """.stripMargin)
+      val results = Seq(12, 10).map(IntNumber(_))
+      (programs zip results).map {
+        case (program, result) => program must haveCorrect(result)
+      }
+    }
 
 
     "correct execute loops " in {
