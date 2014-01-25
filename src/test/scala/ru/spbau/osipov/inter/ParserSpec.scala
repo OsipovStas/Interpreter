@@ -17,7 +17,7 @@ class ParserSpec extends Specification {
 
   val PI = ParserInstance
 
-  "ParserResult " should {
+  "ParserResult " can {
     "be integer literal " in {
       val repr: String = "9894254525843536457346238934"
       val parseResult: PI.ParseResult[Expression] = PI.parseAll(PI.expr, repr)
@@ -57,7 +57,7 @@ class ParserSpec extends Specification {
       } getOrElse None mustEqual Some(repr.trim)
     }
 
-    "be call of function f " in {
+    "be function call " in {
       val repr: String =
         """
           |f(4+5, 5 % (func(4) - x))

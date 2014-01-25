@@ -48,9 +48,20 @@ abstract class BaseParser extends JavaTokenParsers {
     case first ~ other => other.foldLeft(first)(ClipNode)
   }
 
-  def statement: Parser[Node] = assign | define | ex
+  def statement: Parser[Node] = loop | branch | define | assign | ex
 
-  def define: Parser[Node] = "def" ~> ident ~ sign ~ fbody ^^ {
+
+  def loop: Parser[Node] = "while" ~> ("(" ~> expr <~ ")") ~ block ^^ {
+    case cond ~ body => LoopNode(cond, body)
+  }
+  
+  def branch: Parser[Node] = "if" ~> ("(" ~> expr <~ ")") ~ block ~ opt("else" ~> block) ^^ {
+    case cond ~ body ~ Some(alter) => BranchNode(cond, body, alter)
+    case cond ~ body ~ None => BranchNode(cond, body, SkipNode)
+  }
+  
+  
+  def define: Parser[Node] = "def" ~> ident ~ sign ~ block ^^ {
     case i ~ s ~ b => FunctionNode(i, s, b)
   }
 
@@ -62,7 +73,7 @@ abstract class BaseParser extends JavaTokenParsers {
 
   def param = ident ~ opt("=" ~> expr)
   
-  def fbody = "{" ~> code <~ "}"
+  def block = "{" ~> code <~ "}" | statement
 
   def assign: Parser[Node] = (ident <~ "=") ~ expr ^^ {
     case n ~ e => AssignVar(n, e)

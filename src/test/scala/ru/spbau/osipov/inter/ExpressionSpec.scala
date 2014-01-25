@@ -16,7 +16,7 @@ class ExpressionSpec extends Specification {
   })
 
 
-  "Expressions " should {
+  "Expression executor " should {
     "correct interpret int literals" in {
       val repr: String = "9894254525843536457346238934"
       expr(repr) mustEqual Right(IntNumber(BigInt(repr)))

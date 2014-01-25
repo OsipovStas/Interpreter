@@ -2,7 +2,7 @@ package ru.spbau.osipov.inter.interpreter
 
 import ru.spbau.osipov.inter.Interpreter._
 import ru.spbau.osipov.inter.errors.Errors._
-import ru.spbau.osipov.inter.{Interpreter, Executable}
+import ru.spbau.osipov.inter.Executable
 
 /**
  * @author stasstels
@@ -53,8 +53,8 @@ case class CallExpression(function: Var, args: Seq[Expression]) extends Expressi
 
 
   def eval(ctx: Ctx): Val = ctx.get(function).toRight(noDefFound(function)).right flatMap {
-    case Function(bindings, body, scope) => createLocalCtx(ctx, bindings).right flatMap {
-      case locals => body.exec(locals ++ scope).right map {
+    case f @ Function(bindings, body, scope) => createLocalCtx(ctx, bindings).right flatMap {
+      case locals => body.exec(locals ++ scope + (function -> f)).right map {
         case r => r.getOrElse(Return, void)
       }
     }

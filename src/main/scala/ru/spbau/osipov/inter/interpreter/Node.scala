@@ -1,10 +1,10 @@
 package ru.spbau.osipov.inter.interpreter
 
-import scala.annotation.tailrec
 
 import ru.spbau.osipov.inter.Interpreter._
 import ru.spbau.osipov.inter.{Interpreter, Executable}
 import ru.spbau.osipov.inter.errors.Errors.Errors
+import scala.util.control.TailCalls._
 
 /**
  * @author stasstels
@@ -66,23 +66,21 @@ case class BranchNode(cond: Expression, body: Node, alter: Node) extends Node {
 
 case class LoopNode(cond: Expression, body: Node) extends Node {
 
+  def execRec(ctx: Ctx): TailRec[Env] = cond.eval(ctx).fold ({
+    case err => done(Left(err))
+  }, {
+    case False => done(Right(ctx))
+    case True => tailcall(loopStep(ctx))
+    case v => done(Left(expectedLogicValue(v.toString)))
+  })
 
-  @tailrec
-  final def exec(ctx: Ctx): Env = {
-    var continue = false
-    val nCtx: Either[Seq[String], Ctx] = cond.eval(ctx).right flatMap {
-      case True =>
-        continue = true
-        body.exec(ctx)
-      case False => Right(ctx)
-      case v => Left(expectedLogicValue(v.toString))
-    }
-    nCtx match {
-      case Left(e) => nCtx
-      case Right(_) if !continue => nCtx
-      case Right(ct) => exec(ct)
-    }
-  }
+  def loopStep(ctx: Ctx): TailRec[Env] = body.exec(ctx).fold ({
+    case err => done(Left(err))
+  }, {
+    case nCtx => tailcall(execRec(nCtx))
+  })
+
+  def exec(ctx: Interpreter.Ctx): Env = execRec(ctx).result
 }
 
 case class FunctionNode(name: Var, bindings: Seq[(Var, Option[Expression])], body: Node) extends Node {
