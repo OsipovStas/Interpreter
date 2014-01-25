@@ -1,9 +1,10 @@
 package ru.spbau.osipov.inter
 
 import ru.spbau.osipov.inter.interpreter.{Single, Value}
-import ru.spbau.osipov.inter.Defines.{Env, Ctx}
+import ru.spbau.osipov.inter.Defines.Ctx
 import ru.spbau.osipov.inter.parser.Parsing
 import ru.spbau.osipov.inter.errors.Errors.Errors
+import scala.annotation.tailrec
 
 /**
  * @author stasstels
@@ -20,16 +21,21 @@ trait Executing { this: Parsing =>
 
   trait Executor[T] {
     def execute(e: Executable[T]): Either[Errors, T]
+
   }
 
   object FreeExecutor extends Executor[Value] {
     def execute(e: Executable[Value]): Either[Errors, Value] = e.execute(Map())
+
   }
 
-  case class CtxExecutor[T](ctx: Ctx) extends Executor[T] {
-    def execute(e: Executable[T]): Either[Errors, T] = e.execute(ctx)
-  } 
-  
+  case class CtxExecutor(start: Ctx) extends Executor[Ctx] {
+    def execute(e: Executable[Ctx]): Either[Errors, Ctx] = e.execute(start)
+
+
+  }
+
+
   
 }
 
@@ -51,6 +57,36 @@ object eval extends Parsing with Executing {
   def apply(program: String): Either[Errors, eval.R] = Parser.parseProgram(program).right.flatMap(Executor.execute)
 
   def result(ctx: eval.R) = ctx.get(Defines.Return)
+
+
+
+
+  @tailrec
+  final def loop(ctx: Ctx): Ctx = {
+    readLine("-> ") match {
+      case "exit" => ctx
+      case program => Parser.parseProgram(program) match {
+        case Right(e) => loop(e.execute(ctx).fold({
+          case err =>
+            println("Errors occurred: ")
+            err.foreach(println(_))
+            ctx
+        }, {
+          case nCtx =>
+            printf("Result: %s\n", nCtx.getOrElse(Defines.Return, Single))
+            nCtx
+        }))
+        case Left(err) =>
+          println("Parsing errors occurred: ")
+          err.foreach(println(_))
+          loop(ctx)
+      }
+    }
+  }
+
+
+  def start(cmds: Seq[String]) = loop(Map())
+
 }
 
 
@@ -61,22 +97,12 @@ object expr extends Parsing with Executing {
   val Executor: expr.Executor[expr.R] = FreeExecutor
 
   def apply(program: String): Either[Errors, expr.R] = Parser.parseProgram(program).right.flatMap(Executor.execute)
+
 }
 
 object Repl extends App {
 
-  def loop: Stream[Unit] = print(eval(readLine())) #:: loop
-
-  def print(e: Env) = e.fold({
-    case err =>
-      println("Errors occurred: ")
-      err.foreach(println(_))
-  }, {
-    case ctx =>
-      printf("Result: %s\n", ctx.getOrElse(Defines.Return, Single))
-  })
-
-  def apply() = loop
+  def apply() = eval.loop(Map())
 
   Repl()
 }
